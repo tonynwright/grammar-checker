@@ -35,7 +35,6 @@
                 <div>
                     <h1 class="text-3xl font-bold text-gray-800">📚 Grammar Checker</h1>
                     <p class="text-gray-600 text-sm">Advanced writing assistant for students</p>
-                    <p class="text-xs text-indigo-600 mt-1" id="status-message">Loading grammar engine...</p>
                 </div>
                 <div class="flex gap-4 text-sm">
                     <div class="text-center">
@@ -61,10 +60,10 @@
                     <div class="flex justify-between items-center mb-4">
                         <h2 class="text-xl font-semibold text-gray-800">Your Text</h2>
                         <div class="flex gap-2">
-                            <button onclick="window.checkNow()" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-medium transition">
+                            <button onclick="checkNow()" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-medium transition">
                                 Check Now
                             </button>
-                            <button onclick="window.clearText()" class="px-4 py-2 bg-gray-200 hover:bg-gray-300 rounded-lg text-sm font-medium transition">
+                            <button onclick="clearText()" class="px-4 py-2 bg-gray-200 hover:bg-gray-300 rounded-lg text-sm font-medium transition">
                                 Clear
                             </button>
                         </div>
@@ -94,7 +93,7 @@
                         <div class="text-center py-8 text-gray-500">
                             <div class="text-4xl mb-2">✅</div>
                             <p>Type some text and click "Check Now"</p>
-                            <p class="text-sm mt-1">Advanced grammar checking ready!</p>
+                            <p class="text-sm mt-1">Grammar checking ready!</p>
                         </div>
                     </div>
                 </div>
@@ -104,342 +103,322 @@
         <!-- Info Footer -->
         <div class="mt-6 bg-white rounded-lg shadow-lg p-4 text-center text-sm text-gray-600">
             <p>🔒 Your privacy matters: All checking happens in your browser. No data is sent anywhere.</p>
-            <p class="text-xs mt-1">Powered by LanguageTool</p>
         </div>
     </div>
 
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/compromise/14.9.0/compromise.min.js"></script>
     <script>
-        (function() {
-            let currentErrors = [];
-            let isReady = false;
+        let currentErrors = [];
 
-            // Advanced grammar rules using compromise NLP
-            function checkGrammarAdvanced(text) {
-                const errors = [];
-                
-                // Use compromise for NLP analysis
-                const doc = nlp(text);
-                
-                // Check for missing capitalization at sentence start
-                const sentences = text.match(/[^.!?]+[.!?]+/g) || [text];
-                let currentIndex = 0;
-                
-                sentences.forEach(sentence => {
-                    const trimmed = sentence.trim();
-                    if (trimmed.length > 0 && /^[a-z]/.test(trimmed)) {
+        function checkGrammar(text) {
+            const errors = [];
+            
+            // Sentence capitalization
+            const sentences = text.match(/[^.!?]+[.!?]+/g) || [text];
+            let currentIndex = 0;
+            
+            sentences.forEach(sentence => {
+                const trimmed = sentence.trim();
+                if (trimmed.length > 0 && /^[a-z]/.test(trimmed)) {
+                    const actualIndex = text.indexOf(trimmed, currentIndex);
+                    if (actualIndex !== -1) {
                         errors.push({
-                            index: currentIndex,
+                            index: actualIndex,
                             length: 1,
                             original: trimmed.charAt(0),
                             suggestion: trimmed.charAt(0).toUpperCase(),
                             reason: "Sentences should start with a capital letter",
-                            type: 'capitalization',
-                            severity: 'error'
+                            type: 'capitalization'
                         });
                     }
-                    currentIndex += sentence.length;
-                });
-
-                // Basic grammar patterns
-                const patterns = [
-                    {
-                        regex: /\b(their|there|they're)\b/gi,
-                        check: (match, context) => {
-                            const word = match[0].toLowerCase();
-                            const before = context.substring(Math.max(0, match.index - 20), match.index).toLowerCase();
-                            const after = context.substring(match.index + match[0].length, match.index + match[0].length + 20).toLowerCase();
-                            
-                            if (word === 'their' && /\b(are|is|were|was)\s*$/.test(before)) {
-                                return { suggestion: "they're", reason: "Use 'they're' (they are) after a verb", type: 'grammar' };
-                            }
-                            if (word === 'there' && /^'s\b/.test(after)) {
-                                return { suggestion: "their", reason: "Use 'their' (possessive) before 's", type: 'grammar' };
-                            }
-                            return null;
-                        }
-                    },
-                    {
-                        regex: /\b(your|you're)\b/gi,
-                        check: (match, context) => {
-                            const word = match[0].toLowerCase();
-                            const before = context.substring(Math.max(0, match.index - 20), match.index).toLowerCase();
-                            
-                            if (word === 'your' && /\b(are|is|were|was)\s*$/.test(before)) {
-                                return { suggestion: "you're", reason: "Use 'you're' (you are) after a verb", type: 'grammar' };
-                            }
-                            return null;
-                        }
-                    },
-                    {
-                        regex: /\b(its|it's)\b/gi,
-                        check: (match, context) => {
-                            const word = match[0].toLowerCase();
-                            const before = context.substring(Math.max(0, match.index - 20), match.index).toLowerCase();
-                            
-                            if (word === 'its' && /\b(is|was)\s*$/.test(before)) {
-                                return { suggestion: "it's", reason: "Use 'it's' (it is/was)", type: 'grammar' };
-                            }
-                            return null;
-                        }
-                    },
-                    {
-                        regex: /\b(to|too|two)\b/gi,
-                        check: (match, context) => {
-                            const word = match[0].toLowerCase();
-                            const after = context.substring(match.index + match[0].length, match.index + match[0].length + 20).toLowerCase();
-                            
-                            if (word === 'to' && /^\s+(much|many|late|early|big|small|good|bad|hard|easy)/.test(after)) {
-                                return { suggestion: "too", reason: "Use 'too' (excessive/also)", type: 'grammar' };
-                            }
-                            return null;
-                        }
-                    },
-                    {
-                        regex: /\bi\b/g,
-                        check: () => ({ suggestion: "I", reason: "Always capitalize the pronoun 'I'", type: 'capitalization' })
-                    },
-                    {
-                        regex: /\b(alot)\b/gi,
-                        check: () => ({ suggestion: "a lot", reason: "'A lot' is always two words", type: 'spelling' })
-                    },
-                    {
-                        regex: /\b(cant|wont|dont|doesnt|didnt|isnt|arent|wasnt|werent|havent|hasnt|hadnt|wouldnt|couldnt|shouldnt)\b/gi,
-                        check: (match) => {
-                            const corrections = {
-                                'cant': "can't", 'wont': "won't", 'dont': "don't",
-                                'doesnt': "doesn't", 'didnt': "didn't", 'isnt': "isn't",
-                                'arent': "aren't", 'wasnt': "wasn't", 'werent': "weren't",
-                                'havent': "haven't", 'hasnt': "hasn't", 'hadnt': "hadn't",
-                                'wouldnt': "wouldn't", 'couldnt': "couldn't", 'shouldnt': "shouldn't"
-                            };
-                            const word = match[0].toLowerCase();
-                            return { suggestion: corrections[word], reason: "Contractions need apostrophes", type: 'spelling' };
-                        }
-                    },
-                    {
-                        regex: /\b(recieve|wierd|occured|seperate|definately|goverment|enviroment|tommorow|untill|begining|occassion|accomodate)\b/gi,
-                        check: (match) => {
-                            const corrections = {
-                                'recieve': 'receive', 'wierd': 'weird', 'occured': 'occurred',
-                                'seperate': 'separate', 'definately': 'definitely', 'goverment': 'government',
-                                'enviroment': 'environment', 'tommorow': 'tomorrow', 'untill': 'until',
-                                'begining': 'beginning', 'occassion': 'occasion', 'accomodate': 'accommodate'
-                            };
-                            const word = match[0].toLowerCase();
-                            return { suggestion: corrections[word], reason: "Common spelling error", type: 'spelling' };
-                        }
-                    },
-                    {
-                        regex: /\s{2,}/g,
-                        check: () => ({ suggestion: " ", reason: "Use single spaces between words", type: 'spacing' })
-                    },
-                    {
-                        regex: /\s+([,;:!?.])/g,
-                        check: (match) => ({ suggestion: match[1], reason: "No space before punctuation", type: 'punctuation' })
-                    },
-                    {
-                        regex: /([.!?])([A-Z])/g,
-                        check: (match) => ({ suggestion: match[1] + ' ' + match[2], reason: "Add space after sentence ending", type: 'punctuation' })
-                    }
-                ];
-
-                // Apply all patterns
-                patterns.forEach(pattern => {
-                    const regex = new RegExp(pattern.regex.source, pattern.regex.flags);
-                    let match;
-                    
-                    while ((match = regex.exec(text)) !== null) {
-                        const result = pattern.check(match, text);
-                        if (result) {
-                            errors.push({
-                                index: match.index,
-                                length: match[0].length,
-                                original: match[0],
-                                suggestion: result.suggestion,
-                                reason: result.reason,
-                                type: result.type,
-                                severity: result.severity || 'error'
-                            });
-                        }
-                    }
-                });
-
-                // Check for repeated words
-                const words = text.toLowerCase().match(/\b\w+\b/g) || [];
-                for (let i = 0; i < words.length - 1; i++) {
-                    if (words[i] === words[i + 1]) {
-                        const regex = new RegExp('\\b' + words[i] + '\\s+' + words[i] + '\\b', 'gi');
-                        let match = regex.exec(text);
-                        if (match) {
-                            errors.push({
-                                index: match.index,
-                                length: match[0].length,
-                                original: match[0],
-                                suggestion: words[i],
-                                reason: "Repeated word - probably a typo",
-                                type: 'style',
-                                severity: 'warning'
-                            });
-                        }
-                    }
                 }
+                currentIndex += sentence.length;
+            });
 
-                // Check for basic word order issues using compromise
-                doc.sentences().forEach((sent, idx) => {
-                    const sentText = sent.text();
-                    const hasVerb = sent.verbs().length > 0;
-                    const hasNoun = sent.nouns().length > 0;
-                    
-                    // Check if sentence ends with verb (basic word order issue)
-                    if (hasVerb && hasNoun) {
-                        const words = sent.terms().out('array');
-                        const lastWord = words[words.length - 1];
-                        const lastTerm = sent.terms().last();
+            // Grammar patterns
+            const patterns = [
+                {
+                    regex: /\b(their|there|they're)\b/gi,
+                    check: (match, context) => {
+                        const word = match[0].toLowerCase();
+                        const before = context.substring(Math.max(0, match.index - 20), match.index).toLowerCase();
+                        const after = context.substring(match.index + match[0].length, match.index + match[0].length + 20).toLowerCase();
                         
-                        if (lastTerm.verbs().length > 0 && !sentText.match(/[.!?]$/)) {
-                            const sentIndex = text.indexOf(sentText);
-                            if (sentIndex !== -1) {
-                                errors.push({
-                                    index: sentIndex,
-                                    length: sentText.length,
-                                    original: sentText,
-                                    suggestion: sentText + " [check word order]",
-                                    reason: "This sentence may have unusual word order",
-                                    type: 'grammar',
-                                    severity: 'warning'
-                                });
-                            }
+                        if (word === 'their' && /\b(are|is|were|was)\s*$/.test(before)) {
+                            return { suggestion: "they're", reason: "Use 'they're' (they are) after a verb" };
                         }
-                    }
-                });
-
-                errors.sort((a, b) => a.index - b.index);
-                return errors;
-            }
-
-            function calculateStats(text) {
-                const words = text.trim() ? text.trim().split(/\s+/).length : 0;
-                const sentences = text.split(/[.!?]+/).filter(s => s.trim().length > 0).length;
-                const characters = text.length;
-                
-                document.getElementById('word-count').textContent = words;
-                document.getElementById('sentence-count').textContent = sentences;
-                document.getElementById('char-count').textContent = characters;
-            }
-
-            function updatePreview(text, errors) {
-                const previewSection = document.getElementById('preview-section');
-                const previewText = document.getElementById('preview-text');
-                
-                if (text === '' || errors.length === 0) {
-                    previewSection.classList.add('hidden');
-                    return;
-                }
-                
-                previewSection.classList.remove('hidden');
-                
-                let result = '';
-                let lastIndex = 0;
-                
-                errors.forEach((error) => {
-                    result += escapeHtml(text.substring(lastIndex, error.index));
-                    const highlightClass = error.severity === 'warning' ? 'warning-highlight' : 'error-highlight';
-                    result += '<span class="' + highlightClass + '" title="' + escapeHtml(error.reason) + '">' + 
-                              escapeHtml(text.substring(error.index, error.index + error.length)) + '</span>';
-                    lastIndex = error.index + error.length;
-                });
-                result += escapeHtml(text.substring(lastIndex));
-                
-                previewText.innerHTML = result;
-            }
-
-            function escapeHtml(text) {
-                const div = document.createElement('div');
-                div.textContent = text;
-                return div.innerHTML;
-            }
-
-            function updateSuggestions(errors) {
-                const errorStatus = document.getElementById('error-status');
-                const suggestionsList = document.getElementById('suggestions-list');
-                
-                if (errors.length === 0) {
-                    errorStatus.textContent = '✅ No Issues Found';
-                    suggestionsList.innerHTML = '<div class="text-center py-8 text-gray-500"><div class="text-4xl mb-2">✅</div><p>Your text looks great!</p><p class="text-sm mt-1">No grammar or spelling issues detected.</p></div>';
-                } else {
-                    const errorCount = errors.filter(e => e.severity === 'error').length;
-                    const warningCount = errors.filter(e => e.severity === 'warning').length;
-                    errorStatus.textContent = '⚠️ ' + errors.length + ' Issue' + (errors.length !== 1 ? 's' : '') + ' Found';
-                    
-                    let html = '';
-                    errors.forEach((error, idx) => {
-                        const bgColor = error.severity === 'warning' ? 'bg-yellow-50 border-yellow-200' : 'bg-red-50 border-red-200';
-                        const badgeColor = error.severity === 'warning' ? 'bg-yellow-200 text-yellow-800' : 'bg-red-200 text-red-800';
+                        if (word === 'there' && /^'s\b/.test(after)) {
+                            return { suggestion: "their", reason: "Use 'their' (possessive) before 's" };
+                        }
+                        return null;
+                    },
+                    type: 'grammar'
+                },
+                {
+                    regex: /\b(your|you're)\b/gi,
+                    check: (match, context) => {
+                        const word = match[0].toLowerCase();
+                        const before = context.substring(Math.max(0, match.index - 20), match.index).toLowerCase();
                         
-                        html += '<div class="p-4 ' + bgColor + ' border rounded-lg">';
-                        html += '<div class="flex items-start justify-between mb-2">';
-                        html += '<span class="px-2 py-1 ' + badgeColor + ' text-xs font-semibold rounded uppercase">' + error.type + '</span>';
-                        html += '</div>';
-                        html += '<div class="mb-2"><span class="text-sm text-gray-600">Found: </span>';
-                        html += '<span class="font-mono bg-white px-2 py-1 rounded border text-sm">' + escapeHtml(error.original) + '</span></div>';
-                        html += '<div class="mb-2"><span class="text-sm text-gray-600">Suggestion: </span>';
-                        html += '<span class="font-mono bg-green-50 px-2 py-1 rounded border border-green-300 text-sm">' + escapeHtml(error.suggestion) + '</span></div>';
-                        html += '<p class="text-sm text-gray-700 mb-3">' + escapeHtml(error.reason) + '</p>';
-                        html += '<button onclick="window.applySuggestion(' + idx + ')" class="w-full px-3 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-medium transition">Apply Fix</button>';
-                        html += '</div>';
-                    });
-                    suggestionsList.innerHTML = html;
+                        if (word === 'your' && /\b(are|is|were|was)\s*$/.test(before)) {
+                            return { suggestion: "you're", reason: "Use 'you're' (you are) after a verb" };
+                        }
+                        return null;
+                    },
+                    type: 'grammar'
+                },
+                {
+                    regex: /\b(its|it's)\b/gi,
+                    check: (match, context) => {
+                        const word = match[0].toLowerCase();
+                        const before = context.substring(Math.max(0, match.index - 20), match.index).toLowerCase();
+                        
+                        if (word === 'its' && /\b(is|was)\s*$/.test(before)) {
+                            return { suggestion: "it's", reason: "Use 'it's' (it is/was)" };
+                        }
+                        return null;
+                    },
+                    type: 'grammar'
+                },
+                {
+                    regex: /\b(to|too|two)\b/gi,
+                    check: (match, context) => {
+                        const word = match[0].toLowerCase();
+                        const after = context.substring(match.index + match[0].length, match.index + match[0].length + 20).toLowerCase();
+                        
+                        if (word === 'to' && /^\s+(much|many|late|early|big|small|good|bad|hard|easy)/.test(after)) {
+                            return { suggestion: "too", reason: "Use 'too' (excessive/also)" };
+                        }
+                        return null;
+                    },
+                    type: 'grammar'
+                },
+                {
+                    regex: /\bi\b/g,
+                    check: () => ({ suggestion: "I", reason: "Always capitalize the pronoun 'I'" }),
+                    type: 'capitalization'
+                },
+                {
+                    regex: /\b(alot)\b/gi,
+                    check: () => ({ suggestion: "a lot", reason: "'A lot' is always two words" }),
+                    type: 'spelling'
+                },
+                {
+                    regex: /\b(cant|wont|dont|doesnt|didnt|isnt|arent|wasnt|werent|havent|hasnt|hadnt|wouldnt|couldnt|shouldnt)\b/gi,
+                    check: (match) => {
+                        const corrections = {
+                            'cant': "can't", 'wont': "won't", 'dont': "don't",
+                            'doesnt': "doesn't", 'didnt': "didn't", 'isnt': "isn't",
+                            'arent': "aren't", 'wasnt': "wasn't", 'werent': "weren't",
+                            'havent': "haven't", 'hasnt': "hasn't", 'hadnt': "hadn't",
+                            'wouldnt': "wouldn't", 'couldnt': "couldn't", 'shouldnt': "shouldn't"
+                        };
+                        const word = match[0].toLowerCase();
+                        return { suggestion: corrections[word], reason: "Contractions need apostrophes" };
+                    },
+                    type: 'spelling'
+                },
+                {
+                    regex: /\b(recieve|wierd|occured|seperate|definately|goverment|enviroment|tommorow|untill|begining|occassion|accomodate)\b/gi,
+                    check: (match) => {
+                        const corrections = {
+                            'recieve': 'receive', 'wierd': 'weird', 'occured': 'occurred',
+                            'seperate': 'separate', 'definately': 'definitely', 'goverment': 'government',
+                            'enviroment': 'environment', 'tommorow': 'tomorrow', 'untill': 'until',
+                            'begining': 'beginning', 'occassion': 'occasion', 'accomodate': 'accommodate'
+                        };
+                        const word = match[0].toLowerCase();
+                        return { suggestion: corrections[word], reason: "Common spelling error" };
+                    },
+                    type: 'spelling'
+                },
+                {
+                    regex: /\s{2,}/g,
+                    check: () => ({ suggestion: " ", reason: "Use single spaces between words" }),
+                    type: 'spacing'
+                },
+                {
+                    regex: /\s+([,;:!?.])/g,
+                    check: (match) => ({ suggestion: match[1], reason: "No space before punctuation" }),
+                    type: 'punctuation'
+                },
+                {
+                    regex: /([.!?])([A-Z])/g,
+                    check: (match) => ({ suggestion: match[1] + ' ' + match[2], reason: "Add space after sentence ending" }),
+                    type: 'punctuation'
+                }
+            ];
+
+            // Apply patterns
+            patterns.forEach(pattern => {
+                const regex = new RegExp(pattern.regex.source, pattern.regex.flags);
+                let match;
+                
+                while ((match = regex.exec(text)) !== null) {
+                    const result = pattern.check(match, text);
+                    if (result) {
+                        errors.push({
+                            index: match.index,
+                            length: match[0].length,
+                            original: match[0],
+                            suggestion: result.suggestion,
+                            reason: result.reason,
+                            type: pattern.type
+                        });
+                    }
+                }
+            });
+
+            // Check for repeated words
+            const repeatRegex = /\b(\w+)\s+\1\b/gi;
+            let match;
+            while ((match = repeatRegex.exec(text)) !== null) {
+                errors.push({
+                    index: match.index,
+                    length: match[0].length,
+                    original: match[0],
+                    suggestion: match[1],
+                    reason: "Repeated word - probably a typo",
+                    type: 'style'
+                });
+            }
+
+            // Check for adjective + verb + noun pattern (like "Green trees good are")
+            const words = text.match(/\b[a-zA-Z]+\b/g) || [];
+            const adjectives = ['good', 'bad', 'big', 'small', 'green', 'red', 'blue', 'yellow', 'happy', 'sad', 'beautiful', 'ugly', 'fast', 'slow', 'hot', 'cold', 'new', 'old'];
+            const verbs = ['is', 'are', 'was', 'were', 'be', 'been', 'being', 'have', 'has', 'had', 'do', 'does', 'did'];
+            
+            for (let i = 0; i < words.length - 2; i++) {
+                const word1 = words[i].toLowerCase();
+                const word2 = words[i + 1].toLowerCase();
+                const word3 = words[i + 2].toLowerCase();
+                
+                if (adjectives.includes(word1) && adjectives.includes(word2) && verbs.includes(word3)) {
+                    const phrase = words[i] + ' ' + words[i + 1] + ' ' + words[i + 2];
+                    const phraseIndex = text.toLowerCase().indexOf(phrase.toLowerCase());
+                    if (phraseIndex !== -1) {
+                        errors.push({
+                            index: phraseIndex,
+                            length: phrase.length,
+                            original: phrase,
+                            suggestion: words[i] + ' ' + words[i + 1] + ' ' + words[i + 2],
+                            reason: "Unusual word order - check if verb should come before adjective",
+                            type: 'grammar'
+                        });
+                    }
                 }
             }
 
-            window.applySuggestion = function(errorIdx) {
-                const error = currentErrors[errorIdx];
-                const textInput = document.getElementById('text-input');
-                const text = textInput.value;
-                
-                const newText = text.substring(0, error.index) + error.suggestion + text.substring(error.index + error.length);
-                textInput.value = newText;
-                
-                window.checkNow();
-            };
+            errors.sort((a, b) => a.index - b.index);
+            return errors;
+        }
 
-            window.checkNow = function() {
-                const text = document.getElementById('text-input').value;
-                if (!text.trim()) {
-                    currentErrors = [];
-                    updatePreview('', []);
-                    updateSuggestions([]);
-                    return;
-                }
-                
-                currentErrors = checkGrammarAdvanced(text);
-                calculateStats(text);
-                updatePreview(text, currentErrors);
-                updateSuggestions(currentErrors);
-            };
+        function calculateStats(text) {
+            const words = text.trim() ? text.trim().split(/\s+/).length : 0;
+            const sentences = text.split(/[.!?]+/).filter(s => s.trim().length > 0).length;
+            const characters = text.length;
+            
+            document.getElementById('word-count').textContent = words;
+            document.getElementById('sentence-count').textContent = sentences;
+            document.getElementById('char-count').textContent = characters;
+        }
 
-            window.clearText = function() {
-                document.getElementById('text-input').value = '';
+        function updatePreview(text, errors) {
+            const previewSection = document.getElementById('preview-section');
+            const previewText = document.getElementById('preview-text');
+            
+            if (text === '' || errors.length === 0) {
+                previewSection.classList.add('hidden');
+                return;
+            }
+            
+            previewSection.classList.remove('hidden');
+            
+            let result = '';
+            let lastIndex = 0;
+            
+            errors.forEach((error) => {
+                result += escapeHtml(text.substring(lastIndex, error.index));
+                result += '<span class="error-highlight" title="' + escapeHtml(error.reason) + '">' + 
+                          escapeHtml(text.substring(error.index, error.index + error.length)) + '</span>';
+                lastIndex = error.index + error.length;
+            });
+            result += escapeHtml(text.substring(lastIndex));
+            
+            previewText.innerHTML = result;
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        function updateSuggestions(errors) {
+            const errorStatus = document.getElementById('error-status');
+            const suggestionsList = document.getElementById('suggestions-list');
+            
+            if (errors.length === 0) {
+                errorStatus.textContent = '✅ No Issues Found';
+                suggestionsList.innerHTML = '<div class="text-center py-8 text-gray-500"><div class="text-4xl mb-2">✅</div><p>Your text looks great!</p><p class="text-sm mt-1">No grammar or spelling issues detected.</p></div>';
+            } else {
+                errorStatus.textContent = '⚠️ ' + errors.length + ' Issue' + (errors.length !== 1 ? 's' : '') + ' Found';
+                
+                let html = '';
+                errors.forEach((error, idx) => {
+                    html += '<div class="p-4 bg-red-50 border border-red-200 rounded-lg">';
+                    html += '<div class="flex items-start justify-between mb-2">';
+                    html += '<span class="px-2 py-1 bg-red-200 text-red-800 text-xs font-semibold rounded uppercase">' + error.type + '</span>';
+                    html += '</div>';
+                    html += '<div class="mb-2"><span class="text-sm text-gray-600">Found: </span>';
+                    html += '<span class="font-mono bg-white px-2 py-1 rounded border text-sm">' + escapeHtml(error.original) + '</span></div>';
+                    html += '<div class="mb-2"><span class="text-sm text-gray-600">Suggestion: </span>';
+                    html += '<span class="font-mono bg-green-50 px-2 py-1 rounded border border-green-300 text-sm">' + escapeHtml(error.suggestion) + '</span></div>';
+                    html += '<p class="text-sm text-gray-700 mb-3">' + escapeHtml(error.reason) + '</p>';
+                    html += '<button onclick="applySuggestion(' + idx + ')" class="w-full px-3 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-medium transition">Apply Fix</button>';
+                    html += '</div>';
+                });
+                suggestionsList.innerHTML = html;
+            }
+        }
+
+        function applySuggestion(errorIdx) {
+            const error = currentErrors[errorIdx];
+            const textInput = document.getElementById('text-input');
+            const text = textInput.value;
+            
+            const newText = text.substring(0, error.index) + error.suggestion + text.substring(error.index + error.length);
+            textInput.value = newText;
+            
+            checkNow();
+        }
+
+        function checkNow() {
+            const text = document.getElementById('text-input').value;
+            if (!text.trim()) {
                 currentErrors = [];
                 updatePreview('', []);
                 updateSuggestions([]);
-                calculateStats('');
-            };
+                return;
+            }
+            
+            currentErrors = checkGrammar(text);
+            calculateStats(text);
+            updatePreview(text, currentErrors);
+            updateSuggestions(currentErrors);
+        }
 
-            // Initialize
-            document.getElementById('text-input').addEventListener('input', function() {
-                calculateStats(this.value);
-            });
+        function clearText() {
+            document.getElementById('text-input').value = '';
+            currentErrors = [];
+            updatePreview('', []);
+            updateSuggestions([]);
+            calculateStats('');
+        }
 
-            // Mark as ready
-            setTimeout(function() {
-                isReady = true;
-                document.getElementById('status-message').textContent = '✓ Advanced grammar checking ready!';
-                document.getElementById('status-message').classList.add('text-green-600');
-                document.getElementById('status-message').classList.remove('text-indigo-600');
-            }, 1000);
-        })();
+        // Update stats as user types
+        document.getElementById('text-input').addEventListener('input', function() {
+            calculateStats(this.value);
+        });
     </script>
 </body>
 </html>
