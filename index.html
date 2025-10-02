@@ -305,16 +305,8 @@
 
             // 6. WORD ORDER ISSUES
             var words = text.toLowerCase().match(/\b[a-z]+\b/g) || [];
-            var positions = [];
-            var idx = 0;
             
-            words.forEach(function(word) {
-                var pos = text.toLowerCase().indexOf(word, idx);
-                positions.push(pos);
-                idx = pos + 1;
-            });
-
-            // Check for adjective + adjective + verb pattern
+            // Pattern 1: adjective + adjective + verb (green big are)
             for (var i = 0; i < words.length - 2; i++) {
                 if (ADJECTIVES.indexOf(words[i]) !== -1 && 
                     ADJECTIVES.indexOf(words[i + 1]) !== -1 && 
@@ -327,10 +319,57 @@
                             length: phrase.length,
                             original: text.substring(phrasePos, phrasePos + phrase.length),
                             suggestion: "[Check word order]",
-                            reason: "Unusual word order - the verb typically comes before adjectives",
+                            reason: "Unusual word order - verb should typically come before adjectives",
                             type: 'grammar',
                             severity: 'warning'
                         });
+                    }
+                }
+            }
+            
+            // Pattern 2: noun/word + adjective + verb (trees good are, cat happy is)
+            for (var i = 0; i < words.length - 2; i++) {
+                if (ADJECTIVES.indexOf(words[i + 1]) !== -1 && 
+                    COMMON_VERBS.indexOf(words[i + 2]) !== -1 &&
+                    words.length >= 3) {
+                    // Check if it's not a valid pattern like "I happy am" -> should be "I am happy"
+                    var phrase = words[i] + ' ' + words[i + 1] + ' ' + words[i + 2];
+                    var phrasePos = text.toLowerCase().indexOf(phrase);
+                    if (phrasePos !== -1) {
+                        errors.push({
+                            index: phrasePos,
+                            length: phrase.length,
+                            original: text.substring(phrasePos, phrasePos + phrase.length),
+                            suggestion: "[Check word order]",
+                            reason: "Unusual word order - try: '" + words[i] + ' ' + words[i + 2] + ' ' + words[i + 1] + "'",
+                            type: 'grammar',
+                            severity: 'warning'
+                        });
+                    }
+                }
+            }
+            
+            // Pattern 3: Sentence ending with verb when it has adjectives (good are, bad is)
+            for (var i = 0; i < words.length - 1; i++) {
+                if (ADJECTIVES.indexOf(words[i]) !== -1 && 
+                    COMMON_VERBS.indexOf(words[i + 1]) !== -1) {
+                    // Check if this is at the end of a sentence or phrase
+                    var phrase = words[i] + ' ' + words[i + 1];
+                    var phrasePos = text.toLowerCase().indexOf(phrase);
+                    if (phrasePos !== -1) {
+                        var afterPhrase = text.substring(phrasePos + phrase.length, phrasePos + phrase.length + 5);
+                        // Only flag if it's near end of sentence or followed by punctuation/space
+                        if (/^[.!?,\s]*$/.test(afterPhrase) || afterPhrase.trim() === '') {
+                            errors.push({
+                                index: phrasePos,
+                                length: phrase.length,
+                                original: text.substring(phrasePos, phrasePos + phrase.length),
+                                suggestion: "[Check word order]",
+                                reason: "Unusual word order - verb before adjective sounds more natural",
+                                type: 'grammar',
+                                severity: 'warning'
+                            });
+                        }
                     }
                 }
             }
