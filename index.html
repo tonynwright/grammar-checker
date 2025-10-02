@@ -14,6 +14,16 @@
             border-bottom: 2px solid #ef4444;
             cursor: pointer;
         }
+        .warning-highlight {
+            background-color: #fef3c7;
+            border-bottom: 2px solid #f59e0b;
+            cursor: pointer;
+        }
+        .info-highlight {
+            background-color: #dbeafe;
+            border-bottom: 2px solid #3b82f6;
+            cursor: pointer;
+        }
     </style>
 </head>
 <body class="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100" onload="init()">
@@ -22,8 +32,8 @@
         <div class="bg-white rounded-lg shadow-lg p-6 mb-6">
             <div class="flex items-center justify-between flex-wrap gap-4">
                 <div>
-                    <h1 class="text-3xl font-bold text-gray-800">📚 Grammar Checker</h1>
-                    <p class="text-gray-600 text-sm">Writing assistant for students</p>
+                    <h1 class="text-3xl font-bold text-gray-800">📚 Advanced Grammar Checker</h1>
+                    <p class="text-gray-600 text-sm">Comprehensive writing assistant for students</p>
                 </div>
                 <div class="flex gap-4 text-sm">
                     <div class="text-center">
@@ -66,6 +76,11 @@
 
                     <div id="preview-section" style="display:none;" class="mt-4 p-4 bg-gray-50 rounded-lg border border-gray-200 min-h-[100px]">
                         <h3 class="text-sm font-semibold text-gray-700 mb-2">Preview with highlights:</h3>
+                        <div class="flex gap-2 mb-2 text-xs">
+                            <span class="flex items-center gap-1"><span class="w-3 h-3 bg-red-200 border-b-2 border-red-500"></span> Error</span>
+                            <span class="flex items-center gap-1"><span class="w-3 h-3 bg-yellow-200 border-b-2 border-yellow-600"></span> Style</span>
+                            <span class="flex items-center gap-1"><span class="w-3 h-3 bg-blue-200 border-b-2 border-blue-500"></span> Suggestion</span>
+                        </div>
                         <div id="preview-text" class="text-gray-800 whitespace-pre-wrap font-mono text-sm leading-relaxed"></div>
                     </div>
                 </div>
@@ -91,11 +106,17 @@
         <!-- Info Footer -->
         <div class="mt-6 bg-white rounded-lg shadow-lg p-4 text-center text-sm text-gray-600">
             <p>🔒 All checking happens in your browser. No data is sent anywhere.</p>
+            <p class="text-xs mt-1">Checks: Grammar • Spelling • Punctuation • Style • Passive Voice • Word Order</p>
         </div>
     </div>
 
     <script>
         var currentErrors = [];
+
+        // Common word lists for detection
+        var COMMON_VERBS = ['is', 'are', 'was', 'were', 'be', 'been', 'being', 'am', 'has', 'have', 'had', 'do', 'does', 'did', 'will', 'would', 'could', 'should', 'may', 'might', 'can'];
+        var PAST_PARTICIPLES = ['been', 'done', 'seen', 'gone', 'taken', 'given', 'made', 'found', 'said', 'told', 'written', 'read', 'heard', 'left', 'felt', 'kept', 'held', 'brought', 'thought', 'bought', 'taught', 'caught', 'fought', 'sought', 'built', 'sent', 'spent', 'lent', 'meant', 'learned', 'burnt', 'dreamt', 'dealt', 'felt', 'kept', 'left', 'lost', 'meant', 'met', 'paid', 'sold', 'told', 'understood', 'won', 'worn', 'written', 'broken', 'chosen', 'driven', 'eaten', 'fallen', 'forgotten', 'frozen', 'hidden', 'ridden', 'risen', 'shaken', 'spoken', 'stolen', 'swum', 'thrown', 'woken'];
+        var ADJECTIVES = ['good', 'bad', 'big', 'small', 'great', 'large', 'little', 'new', 'old', 'young', 'right', 'wrong', 'high', 'low', 'long', 'short', 'hot', 'cold', 'happy', 'sad', 'beautiful', 'ugly', 'easy', 'hard', 'fast', 'slow', 'clean', 'dirty', 'rich', 'poor', 'strong', 'weak', 'heavy', 'light', 'dark', 'bright', 'deep', 'shallow', 'wide', 'narrow', 'thick', 'thin', 'full', 'empty', 'green', 'red', 'blue', 'yellow', 'black', 'white'];
 
         function init() {
             document.getElementById('check-btn').onclick = checkNow;
@@ -108,7 +129,7 @@
         function checkGrammar(text) {
             var errors = [];
             
-            // Sentence capitalization
+            // 1. CAPITALIZATION CHECKS
             var sentences = text.match(/[^.!?]+[.!?]+/g) || [text];
             var currentIndex = 0;
             
@@ -124,14 +145,15 @@
                             original: trimmed.charAt(0),
                             suggestion: trimmed.charAt(0).toUpperCase(),
                             reason: "Capitalize first letter of sentence",
-                            type: 'capitalization'
+                            type: 'capitalization',
+                            severity: 'error'
                         });
                     }
                 }
                 currentIndex += sentence.length;
             }
 
-            // Check pronoun I
+            // Pronoun I
             var iRegex = /\bi\b/g;
             var match;
             while ((match = iRegex.exec(text)) !== null) {
@@ -141,17 +163,19 @@
                     original: 'i',
                     suggestion: 'I',
                     reason: "Always capitalize 'I'",
-                    type: 'capitalization'
+                    type: 'capitalization',
+                    severity: 'error'
                 });
             }
 
-            // Check contractions
+            // 2. CONTRACTION CHECKS
             var contractions = {
                 'cant': "can't", 'wont': "won't", 'dont': "don't",
                 'doesnt': "doesn't", 'didnt': "didn't", 'isnt': "isn't",
                 'arent': "aren't", 'wasnt': "wasn't", 'werent': "weren't",
                 'havent': "haven't", 'hasnt': "hasn't", 'hadnt': "hadn't",
-                'wouldnt': "wouldn't", 'couldnt': "couldn't", 'shouldnt': "shouldn't"
+                'wouldnt': "wouldn't", 'couldnt': "couldn't", 'shouldnt': "shouldn't",
+                'ive': "I've", 'youve': "you've", 'weve': "we've", 'theyve': "they've"
             };
             
             for (var wrong in contractions) {
@@ -162,23 +186,30 @@
                         length: match[0].length,
                         original: match[0],
                         suggestion: contractions[wrong],
-                        reason: "Missing apostrophe",
-                        type: 'spelling'
+                        reason: "Missing apostrophe in contraction",
+                        type: 'spelling',
+                        severity: 'error'
                     });
                 }
             }
 
-            // Check common misspellings
+            // 3. COMMON MISSPELLINGS
             var misspellings = {
-                'alot': 'a lot',
-                'recieve': 'receive',
-                'wierd': 'weird',
-                'occured': 'occurred',
-                'seperate': 'separate',
-                'definately': 'definitely',
-                'goverment': 'government',
-                'enviroment': 'environment',
-                'tommorow': 'tomorrow'
+                'alot': 'a lot', 'recieve': 'receive', 'wierd': 'weird',
+                'occured': 'occurred', 'seperate': 'separate', 'definately': 'definitely',
+                'goverment': 'government', 'enviroment': 'environment', 'tommorow': 'tomorrow',
+                'untill': 'until', 'begining': 'beginning', 'occassion': 'occasion',
+                'accomodate': 'accommodate', 'adress': 'address', 'arguement': 'argument',
+                'beleive': 'believe', 'calender': 'calendar', 'collegue': 'colleague',
+                'commitee': 'committee', 'concious': 'conscious', 'explaination': 'explanation',
+                'fourty': 'forty', 'grammer': 'grammar', 'harrass': 'harass',
+                'inoculate': 'inoculate', 'liason': 'liaison', 'maintainance': 'maintenance',
+                'millenium': 'millennium', 'miniscule': 'minuscule', 'mispell': 'misspell',
+                'noticable': 'noticeable', 'occassionally': 'occasionally', 'perseverance': 'perseverance',
+                'posession': 'possession', 'prefered': 'preferred', 'priviledge': 'privilege',
+                'pronounciation': 'pronunciation', 'reccommend': 'recommend', 'referance': 'reference',
+                'relevent': 'relevant', 'rythm': 'rhythm', 'succesful': 'successful',
+                'supercede': 'supersede', 'tendancy': 'tendency', 'truely': 'truly'
             };
             
             for (var wrong in misspellings) {
@@ -190,12 +221,121 @@
                         original: match[0],
                         suggestion: misspellings[wrong],
                         reason: "Common spelling error",
-                        type: 'spelling'
+                        type: 'spelling',
+                        severity: 'error'
                     });
                 }
             }
 
-            // Check repeated words
+            // 4. THEIR/THERE/THEY'RE, YOUR/YOU'RE, ITS/IT'S, TO/TOO/TWO
+            var homophones = [
+                {
+                    words: ['their', 'there', 'theyre'],
+                    check: function(word, before, after) {
+                        var w = word.toLowerCase().replace("'", "");
+                        if (w === 'their' && /\b(is|are|was|were)\s*$/i.test(before)) return "they're";
+                        if (w === 'there' && /'s\b/i.test(after)) return "their";
+                        return null;
+                    }
+                },
+                {
+                    words: ['your', 'youre'],
+                    check: function(word, before) {
+                        var w = word.toLowerCase().replace("'", "");
+                        if (w === 'your' && /\b(is|are|was|were)\s*$/i.test(before)) return "you're";
+                        return null;
+                    }
+                },
+                {
+                    words: ['its', 'its'],
+                    check: function(word, before) {
+                        var w = word.toLowerCase().replace("'", "");
+                        if (w === 'its' && /\b(is|are|was|were)\s*$/i.test(before)) return "it's";
+                        return null;
+                    }
+                },
+                {
+                    words: ['to', 'too', 'two'],
+                    check: function(word, before, after) {
+                        if (word.toLowerCase() === 'to' && /^\s+(much|many|late|early|big|small|good|bad|hard|easy|soon|far)/i.test(after)) return "too";
+                        return null;
+                    }
+                }
+            ];
+
+            homophones.forEach(function(homo) {
+                homo.words.forEach(function(w) {
+                    var regex = new RegExp('\\b' + w + '\\b', 'gi');
+                    while ((match = regex.exec(text)) !== null) {
+                        var before = text.substring(Math.max(0, match.index - 20), match.index);
+                        var after = text.substring(match.index + match[0].length, match.index + match[0].length + 30);
+                        var suggestion = homo.check(match[0], before, after);
+                        if (suggestion) {
+                            errors.push({
+                                index: match.index,
+                                length: match[0].length,
+                                original: match[0],
+                                suggestion: suggestion,
+                                reason: "Wrong word choice for context",
+                                type: 'grammar',
+                                severity: 'error'
+                            });
+                        }
+                    }
+                });
+            });
+
+            // 5. PASSIVE VOICE DETECTION
+            var passiveRegex = /\b(is|are|was|were|be|been|being)\s+(\w+ed|been|done|seen|gone|taken|given|made|found|said|told|written|read|heard|left|felt|kept|held|brought|thought|bought|taught|caught|fought|sought|built|sent|spent|lent|meant|learned|burnt|dreamt|dealt|met|paid|sold|understood|won|worn|broken|chosen|driven|eaten|fallen|forgotten|frozen|hidden|ridden|risen|shaken|spoken|stolen|swum|thrown|woken)\b/gi;
+            
+            while ((match = passiveRegex.exec(text)) !== null) {
+                var sentence = getSentenceAt(text, match.index);
+                if (sentence) {
+                    errors.push({
+                        index: match.index,
+                        length: match[0].length,
+                        original: match[0],
+                        suggestion: "[Consider active voice]",
+                        reason: "Passive voice detected - consider using active voice for clearer writing",
+                        type: 'style',
+                        severity: 'suggestion'
+                    });
+                }
+            }
+
+            // 6. WORD ORDER ISSUES
+            var words = text.toLowerCase().match(/\b[a-z]+\b/g) || [];
+            var positions = [];
+            var idx = 0;
+            
+            words.forEach(function(word) {
+                var pos = text.toLowerCase().indexOf(word, idx);
+                positions.push(pos);
+                idx = pos + 1;
+            });
+
+            // Check for adjective + adjective + verb pattern
+            for (var i = 0; i < words.length - 2; i++) {
+                if (ADJECTIVES.indexOf(words[i]) !== -1 && 
+                    ADJECTIVES.indexOf(words[i + 1]) !== -1 && 
+                    COMMON_VERBS.indexOf(words[i + 2]) !== -1) {
+                    var phrase = words[i] + ' ' + words[i + 1] + ' ' + words[i + 2];
+                    var phrasePos = text.toLowerCase().indexOf(phrase);
+                    if (phrasePos !== -1) {
+                        errors.push({
+                            index: phrasePos,
+                            length: phrase.length,
+                            original: text.substring(phrasePos, phrasePos + phrase.length),
+                            suggestion: "[Check word order]",
+                            reason: "Unusual word order - the verb typically comes before adjectives",
+                            type: 'grammar',
+                            severity: 'warning'
+                        });
+                    }
+                }
+            }
+
+            // 7. REPEATED WORDS
             var repeatRegex = /\b(\w+)\s+\1\b/gi;
             while ((match = repeatRegex.exec(text)) !== null) {
                 errors.push({
@@ -203,12 +343,13 @@
                     length: match[0].length,
                     original: match[0],
                     suggestion: match[1],
-                    reason: "Repeated word",
-                    type: 'style'
+                    reason: "Repeated word - likely a typo",
+                    type: 'style',
+                    severity: 'warning'
                 });
             }
 
-            // Check double spaces
+            // 8. SPACING AND PUNCTUATION
             var spaceRegex = /\s{2,}/g;
             while ((match = spaceRegex.exec(text)) !== null) {
                 errors.push({
@@ -216,13 +357,62 @@
                     length: match[0].length,
                     original: match[0],
                     suggestion: ' ',
-                    reason: "Extra spaces",
-                    type: 'spacing'
+                    reason: "Extra spaces between words",
+                    type: 'spacing',
+                    severity: 'error'
                 });
             }
 
+            var punctSpaceRegex = /\s+([,;:!?.])/g;
+            while ((match = punctSpaceRegex.exec(text)) !== null) {
+                errors.push({
+                    index: match.index,
+                    length: match[0].length,
+                    original: match[0],
+                    suggestion: match[1],
+                    reason: "No space before punctuation",
+                    type: 'punctuation',
+                    severity: 'error'
+                });
+            }
+
+            // 9. SENTENCE FRAGMENTS (very basic)
+            sentences.forEach(function(sentence, idx) {
+                var trimmed = sentence.trim();
+                var hasVerb = false;
+                COMMON_VERBS.forEach(function(verb) {
+                    if (new RegExp('\\b' + verb + '\\b', 'i').test(trimmed)) {
+                        hasVerb = true;
+                    }
+                });
+                
+                if (trimmed.length > 20 && !hasVerb && /[.!?]$/.test(trimmed)) {
+                    var sentPos = text.indexOf(trimmed);
+                    if (sentPos !== -1) {
+                        errors.push({
+                            index: sentPos,
+                            length: trimmed.length,
+                            original: trimmed,
+                            suggestion: "[Add a verb]",
+                            reason: "Possible sentence fragment - this sentence may be missing a verb",
+                            type: 'grammar',
+                            severity: 'suggestion'
+                        });
+                    }
+                }
+            });
+
             errors.sort(function(a, b) { return a.index - b.index; });
             return errors;
+        }
+
+        function getSentenceAt(text, index) {
+            var before = text.substring(0, index);
+            var after = text.substring(index);
+            var start = Math.max(0, before.lastIndexOf('.'), before.lastIndexOf('!'), before.lastIndexOf('?')) + 1;
+            var endMatch = after.match(/[.!?]/);
+            var end = endMatch ? index + after.indexOf(endMatch[0]) + 1 : text.length;
+            return text.substring(start, end).trim();
         }
 
         function calculateStats(text) {
@@ -258,7 +448,12 @@
             for (var i = 0; i < errors.length; i++) {
                 var error = errors[i];
                 result += escapeHtml(text.substring(lastIndex, error.index));
-                result += '<span class="error-highlight" title="' + escapeHtml(error.reason) + '">' + 
+                
+                var highlightClass = 'error-highlight';
+                if (error.severity === 'warning') highlightClass = 'warning-highlight';
+                if (error.severity === 'suggestion') highlightClass = 'info-highlight';
+                
+                result += '<span class="' + highlightClass + '" title="' + escapeHtml(error.reason) + '">' + 
                           escapeHtml(text.substring(error.index, error.index + error.length)) + '</span>';
                 lastIndex = error.index + error.length;
             }
@@ -273,21 +468,42 @@
             
             if (errors.length === 0) {
                 errorStatus.textContent = '✅ No Issues Found';
-                suggestionsList.innerHTML = '<div class="text-center py-8 text-gray-500"><div class="text-4xl mb-2">✅</div><p>Your text looks great!</p></div>';
+                suggestionsList.innerHTML = '<div class="text-center py-8 text-gray-500"><div class="text-4xl mb-2">✅</div><p>Excellent work!</p><p class="text-sm mt-1">No issues detected.</p></div>';
             } else {
+                var errorCount = errors.filter(function(e) { return e.severity === 'error'; }).length;
+                var warningCount = errors.filter(function(e) { return e.severity === 'warning'; }).length;
+                var suggestionCount = errors.filter(function(e) { return e.severity === 'suggestion'; }).length;
+                
                 errorStatus.textContent = '⚠️ ' + errors.length + ' Issue' + (errors.length !== 1 ? 's' : '') + ' Found';
                 
                 var html = '';
                 for (var i = 0; i < errors.length; i++) {
                     var error = errors[i];
-                    html += '<div class="p-4 bg-red-50 border border-red-200 rounded-lg">';
-                    html += '<div class="mb-2"><span class="px-2 py-1 bg-red-200 text-red-800 text-xs font-semibold rounded uppercase">' + error.type + '</span></div>';
+                    var bgColor = 'bg-red-50 border-red-200';
+                    var badgeColor = 'bg-red-200 text-red-800';
+                    
+                    if (error.severity === 'warning') {
+                        bgColor = 'bg-yellow-50 border-yellow-200';
+                        badgeColor = 'bg-yellow-200 text-yellow-800';
+                    } else if (error.severity === 'suggestion') {
+                        bgColor = 'bg-blue-50 border-blue-200';
+                        badgeColor = 'bg-blue-200 text-blue-800';
+                    }
+                    
+                    html += '<div class="p-4 ' + bgColor + ' border rounded-lg">';
+                    html += '<div class="mb-2"><span class="px-2 py-1 ' + badgeColor + ' text-xs font-semibold rounded uppercase">' + error.type + '</span></div>';
                     html += '<div class="mb-2"><span class="text-sm text-gray-600">Found: </span>';
                     html += '<span class="font-mono bg-white px-2 py-1 rounded border text-sm">' + escapeHtml(error.original) + '</span></div>';
-                    html += '<div class="mb-2"><span class="text-sm text-gray-600">Suggestion: </span>';
-                    html += '<span class="font-mono bg-green-50 px-2 py-1 rounded border border-green-300 text-sm">' + escapeHtml(error.suggestion) + '</span></div>';
-                    html += '<p class="text-sm text-gray-700 mb-3">' + escapeHtml(error.reason) + '</p>';
-                    html += '<button onclick="applySuggestion(' + i + ')" class="w-full px-3 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-medium transition">Apply Fix</button>';
+                    
+                    if (!error.suggestion.startsWith('[')) {
+                        html += '<div class="mb-2"><span class="text-sm text-gray-600">Suggestion: </span>';
+                        html += '<span class="font-mono bg-green-50 px-2 py-1 rounded border border-green-300 text-sm">' + escapeHtml(error.suggestion) + '</span></div>';
+                        html += '<p class="text-sm text-gray-700 mb-3">' + escapeHtml(error.reason) + '</p>';
+                        html += '<button onclick="applySuggestion(' + i + ')" class="w-full px-3 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-medium transition">Apply Fix</button>';
+                    } else {
+                        html += '<p class="text-sm text-gray-700 mb-3">' + escapeHtml(error.reason) + '</p>';
+                    }
+                    
                     html += '</div>';
                 }
                 suggestionsList.innerHTML = html;
@@ -296,6 +512,8 @@
 
         function applySuggestion(errorIdx) {
             var error = currentErrors[errorIdx];
+            if (error.suggestion.startsWith('[')) return;
+            
             var textInput = document.getElementById('text-input');
             var text = textInput.value;
             
